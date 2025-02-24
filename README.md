@@ -41,7 +41,7 @@ This monitoring solution is designed to provide immediate visibility into your i
 1. **Clone the repository**
 
    ```bash
-   git clone git@github.com:amirk1998/monitoring-stack.git
+   git clone https://github.com/amirk1998/monitoring-stack.git
    cd devops-monitoring-stack
    ```
 
