@@ -8,7 +8,7 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-            - alertmanager:${ALERTMANAGER_PORT:-9093}
+            - alertmanager:$ALERTMANAGER_PORT
 
 # Load rules once and periodically evaluate them
 rule_files:
@@ -19,22 +19,22 @@ scrape_configs:
   # Prometheus itself
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:${PROMETHEUS_PORT:-9090}"]
+      - targets: ["localhost:$PROMETHEUS_PORT"]
 
   # Node Exporter
   - job_name: "node-exporter"
     static_configs:
-      - targets: ["node-exporter:${NODE_EXPORTER_PORT:-9100}"]
+      - targets: ["node-exporter:$NODE_EXPORTER_PORT"]
 
   # cAdvisor
   - job_name: "cadvisor"
     static_configs:
-      - targets: ["cadvisor:${CADVISOR_PORT:-8080}"]
+      - targets: ["cadvisor:$CADVISOR_PORT"]
 
   # Grafana
   - job_name: "grafana"
     static_configs:
-      - targets: ["grafana:${GRAFANA_PORT:-3000}"]
+      - targets: ["grafana:$GRAFANA_PORT"]
 
   # Blackbox Exporter - HTTP probes
   - job_name: "blackbox-http"
@@ -51,7 +51,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: blackbox-exporter:${BLACKBOX_EXPORTER_PORT:-9115}
+        replacement: blackbox-exporter:$BLACKBOX_EXPORTER_PORT
 
   # Blackbox Exporter - ICMP probes
   - job_name: "blackbox-icmp"
@@ -68,14 +68,14 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: blackbox-exporter:${BLACKBOX_EXPORTER_PORT:-9115}
+        replacement: blackbox-exporter:$BLACKBOX_EXPORTER_PORT
 
   # Loki
   - job_name: "loki"
     static_configs:
-      - targets: ["loki:${LOKI_PORT:-3100}"]
+      - targets: ["loki:$LOKI_PORT"]
 
   # Telegraf
   - job_name: "telegraf"
     static_configs:
-      - targets: ["telegraf:${TELEGRAF_PORT:-9273}"]
+      - targets: ["telegraf:$TELEGRAF_PORT"]
