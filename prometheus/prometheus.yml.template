@@ -1,0 +1,81 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:${ALERTMANAGER_PORT:-9093}
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alert.rules"
+  - "alerts/*.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:${PROMETHEUS_PORT:-9090}"]
+
+  # Node Exporter
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:${NODE_EXPORTER_PORT:-9100}"]
+
+  # cAdvisor
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:${CADVISOR_PORT:-8080}"]
+
+  # Grafana
+  - job_name: "grafana"
+    static_configs:
+      - targets: ["grafana:${GRAFANA_PORT:-3000}"]
+
+  # Blackbox Exporter - HTTP probes
+  - job_name: "blackbox-http"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://example.com
+          - https://prometheus.io
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:${BLACKBOX_EXPORTER_PORT:-9115}
+
+  # Blackbox Exporter - ICMP probes
+  - job_name: "blackbox-icmp"
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets:
+          - 1.1.1.1
+          - 8.8.8.8
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:${BLACKBOX_EXPORTER_PORT:-9115}
+
+  # Loki
+  - job_name: "loki"
+    static_configs:
+      - targets: ["loki:${LOKI_PORT:-3100}"]
+
+  # Telegraf
+  - job_name: "telegraf"
+    static_configs:
+      - targets: ["telegraf:${TELEGRAF_PORT:-9273}"]

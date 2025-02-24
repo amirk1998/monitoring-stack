@@ -1,0 +1,39 @@
+# Environment variables
+.env
+
+# Generated configuration files
+*.yml
+!*.yml.template
+*.conf
+!*.conf.template
+
+# Exclude dashboard configurations from ignore
+!grafana/provisioning/dashboards/*.yml
+!grafana/provisioning/datasources/*.yml
+
+# Exclude alert rules from ignore
+!prometheus/alerts/*.yml
+
+# Volumes data
+**/data/
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volume data
+prometheus_data/
+grafana_data/
+alertmanager_data/
+loki_data/

@@ -1,0 +1,96 @@
+# Global Agent Configuration
+[agent]
+  interval = "10s"
+  round_interval = true
+  metric_batch_size = 1000
+  metric_buffer_limit = 10000
+  collection_jitter = "0s"
+  flush_interval = "10s"
+  flush_jitter = "0s"
+  precision = ""
+  hostname = ""
+  omit_hostname = false
+
+# Output plugins
+[[outputs.prometheus_client]]
+  listen = ":9273"
+  metric_version = 2
+
+# Input plugins
+[[inputs.cpu]]
+  percpu = true
+  totalcpu = true
+  collect_cpu_time = false
+  report_active = false
+
+[[inputs.disk]]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
+
+[[inputs.diskio]]
+
+[[inputs.kernel]]
+
+[[inputs.mem]]
+
+[[inputs.processes]]
+
+[[inputs.swap]]
+
+[[inputs.system]]
+
+[[inputs.netstat]]
+
+[[inputs.net]]
+
+# Docker input plugin
+[[inputs.docker]]
+  endpoint = "unix:///var/run/docker.sock"
+  gather_services = false
+  container_names = []
+  container_name_include = []
+  container_name_exclude = []
+  timeout = "5s"
+  perdevice = true
+  total = false
+  docker_label_include = []
+  docker_label_exclude = []
+
+# HTTP response input plugin
+[[inputs.http_response]]
+  urls = [
+    "http://prometheus:${PROMETHEUS_PORT:-9090}",
+    "http://grafana:${GRAFANA_PORT:-3000}",
+    "http://alertmanager:${ALERTMANAGER_PORT:-9093}",
+    "http://blackbox-exporter:${BLACKBOX_EXPORTER_PORT:-9115}",
+    "http://loki:${LOKI_PORT:-3100}"
+  ]
+  response_timeout = "5s"
+  method = "GET"
+  follow_redirects = true
+
+# Process monitoring
+[[inputs.procstat]]
+  pattern = "prometheus"
+  process_name = "prometheus"
+
+[[inputs.procstat]]
+  pattern = "grafana"
+  process_name = "grafana"
+
+[[inputs.procstat]]
+  pattern = "alertmanager"
+  process_name = "alertmanager"
+
+# Log parsing
+[[inputs.tail]]
+  files = ["/var/log/syslog"]
+  from_beginning = false
+  pipe = false
+  watch_method = "inotify"
+
+  # Data format settings
+  data_format = "grok"
+  grok_patterns = ["%{SYSLOGLINE}"]
+  grok_custom_patterns = '''
+  '''
+  grok_timezone = "Local"
