@@ -1,0 +1,190 @@
+# version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert.rules:/etc/prometheus/alert.rules
+      - ./prometheus/alerts:/etc/prometheus/alerts
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.listen-address=0.0.0.0:${PROMETHEUS_PORT:-9090}'
+    ports:
+      - '${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}'
+    networks:
+      - monitoring
+    depends_on:
+      - cadvisor
+      - node-exporter
+      - blackbox-exporter
+    environment:
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/
+      - alertmanager_data:/alertmanager
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat /etc/alertmanager/alertmanager.yml.template | envsubst > /etc/alertmanager/alertmanager.yml
+        /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager --web.listen-address=0.0.0.0:${ALERTMANAGER_PORT:-9093}
+    ports:
+      - '${ALERTMANAGER_PORT:-9093}:${ALERTMANAGER_PORT:-9093}'
+    networks:
+      - monitoring
+    environment:
+      - ALERTMANAGER_PORT=${ALERTMANAGER_PORT:-9093}
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_SMARTHOST=${SMTP_SMARTHOST}
+      - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
+      - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
+      - ALERT_EMAIL_TO=${ALERT_EMAIL_TO}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--web.listen-address=0.0.0.0:${NODE_EXPORTER_PORT:-9100}'
+    ports:
+      - '${NODE_EXPORTER_PORT:-9100}:${NODE_EXPORTER_PORT:-9100}'
+    networks:
+      - monitoring
+    environment:
+      - NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT:-9100}
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - '${CADVISOR_PORT:-8080}:8080'
+    networks:
+      - monitoring
+    environment:
+      - CADVISOR_PORT=${CADVISOR_PORT:-8080}
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    volumes:
+      - ./blackbox_exporter/blackbox.yml:/etc/blackbox_exporter/config.yml
+    ports:
+      - '${BLACKBOX_EXPORTER_PORT:-9115}:9115'
+    command:
+      - '--config.file=/etc/blackbox_exporter/config.yml'
+      - '--web.listen-address=0.0.0.0:9115'
+    networks:
+      - monitoring
+    environment:
+      - BLACKBOX_EXPORTER_PORT=${BLACKBOX_EXPORTER_PORT:-9115}
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-secure_password}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=${GRAFANA_PORT:-3000}
+    ports:
+      - '${GRAFANA_PORT:-3000}:${GRAFANA_PORT:-3000}'
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - '${LOKI_PORT:-3100}:3100'
+    command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
+    networks:
+      - monitoring
+    environment:
+      - LOKI_PORT=${LOKI_PORT:-3100}
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - monitoring
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    restart: unless-stopped
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - '${TELEGRAF_PORT:-9273}:9273'
+    environment:
+      - TELEGRAF_PORT=${TELEGRAF_PORT:-9273}
+    networks:
+      - monitoring
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP server
+      - '8025:8025' # Web UI
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  loki_data:
